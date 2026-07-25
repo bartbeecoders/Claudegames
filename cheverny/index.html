@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Château de Cheverny — 3D</title>
+<meta name="description" content="A real-time 3D model of the Château de Cheverny, built from scratch in WebGL with no meshes, no textures and no libraries.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cheverny">
+<meta name="theme-color" content="#0d1016">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#127984;</text></svg>">
+<style>
+  :root {
+    color-scheme: dark;
+    --ink: #eae6dc;
+    --dim: #9a9689;
+    --line: rgba(255, 255, 255, 0.14);
+    --glass: rgba(14, 16, 20, 0.62);
+    --gold: #d8b877;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #0d1016; color: var(--ink);
+    font-family: ui-sans-serif, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    overflow: hidden; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none;
+  }
+  #stage {
+    position: fixed; inset: 0; width: 100%; height: 100%;
+    display: block; touch-action: none; cursor: grab;
+  }
+  #stage:active { cursor: grabbing; }
+
+  /* --- panels ----------------------------------------------------------- */
+
+  .glass {
+    background: var(--glass);
+    backdrop-filter: blur(14px) saturate(1.2);
+    -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+
+  #panel {
+    position: fixed; z-index: 3;
+    left: calc(18px + env(safe-area-inset-left));
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    width: 340px; max-width: calc(100vw - 36px);
+    padding: 18px 20px 16px;
+  }
+  #panel h1 {
+    margin: 0; font-family: Georgia, "Times New Roman", serif;
+    font-size: 21px; font-weight: 400; letter-spacing: 0.06em;
+  }
+  #panel .sub {
+    margin: 5px 0 0; font-size: 11.5px; letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+
+  button, .chip {
+    -webkit-appearance: none; appearance: none;
+    font: inherit; font-size: 12px; letter-spacing: 0.03em;
+    color: var(--ink); background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--line); border-radius: 9px;
+    padding: 7px 11px; cursor: pointer;
+    transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+  }
+  button:hover { background: rgba(255, 255, 255, 0.13); }
+  button.on { background: rgba(216, 184, 119, 0.20); border-color: rgba(216, 184, 119, 0.55); color: #f4e4c4; }
+
+  .field { margin-top: 15px; }
+  .field label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim);
+    margin-bottom: 7px;
+  }
+  .field label b { color: var(--gold); font-weight: 500; letter-spacing: 0.04em; text-transform: none; font-size: 12.5px; }
+  input[type=range] {
+    -webkit-appearance: none; appearance: none; width: 100%; height: 18px;
+    background: transparent; cursor: pointer; margin: 0;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 3px; border-radius: 3px;
+    background: linear-gradient(90deg, #2b3550, #b98b4a 42%, #f0d9a8 62%, #6d6a86);
+  }
+  input[type=range]::-moz-range-track {
+    height: 3px; border-radius: 3px;
+    background: linear-gradient(90deg, #2b3550, #b98b4a 42%, #f0d9a8 62%, #6d6a86);
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 15px; height: 15px; margin-top: -6px; border-radius: 50%;
+    background: #f2ecdd; border: 1px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+  }
+  input[type=range]::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: #f2ecdd; border: 1px solid rgba(0, 0, 0, 0.4);
+  }
+
+  #stats {
+    position: fixed; z-index: 3;
+    right: calc(16px + env(safe-area-inset-right));
+    top: calc(16px + env(safe-area-inset-top));
+    padding: 8px 12px; font-size: 11px; letter-spacing: 0.08em;
+    color: var(--dim); font-variant-numeric: tabular-nums;
+  }
+
+  #about {
+    position: fixed; z-index: 4;
+    right: calc(16px + env(safe-area-inset-right));
+    bottom: calc(18px + env(safe-area-inset-bottom));
+    width: 320px; max-width: calc(100vw - 36px);
+    padding: 18px 20px; display: none;
+    font-size: 13px; line-height: 1.65; color: #d7d2c6;
+  }
+  #about.open { display: block; }
+  #about h2 {
+    margin: 0 0 10px; font-family: Georgia, serif; font-weight: 400;
+    font-size: 16px; letter-spacing: 0.04em; color: var(--ink);
+  }
+  #about p { margin: 0 0 10px; }
+  #about p:last-of-type { margin-bottom: 0; }
+  #about em { color: var(--gold); font-style: normal; }
+  #about .close { position: absolute; top: 10px; right: 10px; padding: 3px 9px; }
+
+  #hint {
+    position: fixed; z-index: 2; left: 50%; transform: translateX(-50%);
+    bottom: calc(20px + env(safe-area-inset-bottom));
+    font-size: 11.5px; letter-spacing: 0.06em; color: rgba(255, 255, 255, 0.42);
+    text-align: center; pointer-events: none; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.7);
+  }
+  #hint b { color: rgba(255, 255, 255, 0.7); font-weight: 500; }
+
+  #curtain {
+    position: fixed; inset: 0; z-index: 9;
+    background: radial-gradient(120% 90% at 50% 30%, #1a2130, #0a0c11 70%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; transition: opacity 700ms ease;
+  }
+  #curtain.gone { opacity: 0; pointer-events: none; }
+  #curtain h1 {
+    margin: 0; font-family: Georgia, "Times New Roman", serif;
+    font-weight: 400; font-size: clamp(24px, 5.5vw, 40px); letter-spacing: 0.14em;
+    text-align: center; color: #efe8d8;
+  }
+  #curtain p { margin: 0; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #7d7a70; }
+  #bar { width: 190px; height: 2px; background: rgba(255, 255, 255, 0.12); overflow: hidden; }
+  #bar i { display: block; height: 100%; width: 30%; background: var(--gold); animation: sweep 1.1s ease-in-out infinite; }
+  @keyframes sweep { 0% { transform: translateX(-110%); } 100% { transform: translateX(360%); } }
+  #curtain.failed #bar { display: none; }
+  #curtain .err { max-width: 460px; text-align: center; color: #c9a0a0; font-size: 13px; line-height: 1.6; letter-spacing: 0; text-transform: none; }
+
+  /* Tapping the title folds the panel away — on a phone it would otherwise
+     cover half of the view. */
+  #panel h1 { cursor: pointer; }
+  #panel h1::after {
+    content: "▾"; float: right; font-size: 13px; opacity: 0.45;
+    transition: transform 160ms ease; transform-origin: 50% 55%;
+  }
+  #panel.mini h1::after { transform: rotate(-90deg); }
+  #panel.mini .sub, #panel.mini .row, #panel.mini .field { display: none; }
+
+  @media (max-width: 760px) {
+    #panel { width: calc(100vw - 24px); left: 12px; bottom: 12px; padding: 12px 14px 10px; }
+    #panel h1 { font-size: 17px; }
+    #panel .row { gap: 5px; margin-top: 10px; }
+    #panel button { font-size: 11.5px; padding: 6px 9px; }
+    #panel .field { margin-top: 11px; }
+    #about { width: calc(100vw - 24px); right: 12px; bottom: 12px; }
+    #hint { display: none; }
+    #stats { font-size: 10px; padding: 6px 9px; }
+  }
+  @media (max-height: 520px) {
+    #panel .sub { display: none; }
+  }
+</style>
+</head>
+<body>
+  <canvas id="stage"></canvas>
+
+  <div id="stats" class="glass">0 fps</div>
+
+  <div id="panel" class="glass">
+    <h1 id="fold" title="Show or hide the controls">Château de Cheverny</h1>
+    <p class="sub">Loir-et-Cher · 1624&ndash;1630</p>
+
+    <div class="row" id="views"></div>
+
+    <div class="field">
+      <label for="time">Time of day <b id="clock">16:00</b></label>
+      <input id="time" type="range" min="0" max="1000" value="780">
+    </div>
+
+    <div class="row">
+      <button id="walk" type="button">Walk</button>
+      <button id="quality" type="button">Quality: medium</button>
+      <button id="full" type="button">Fullscreen</button>
+      <button id="info" type="button">About</button>
+    </div>
+  </div>
+
+  <div id="about" class="glass">
+    <button class="close" id="closeAbout" type="button">Close</button>
+    <h2>About the model</h2>
+    <p>
+      Cheverny was built between 1624 and 1630 for Philippe Hurault, in white
+      <em>tuffeau</em> limestone from Bourré, which bleaches as it weathers.
+      The two end pavilions carry <em>dômes à l&rsquo;impériale</em> with open
+      lanterns; the court front is banded ashlar set with busts of Roman
+      emperors, while the garden front is rendered panels in a stone frame,
+      with a dry moat at its feet.
+    </p>
+    <p>
+      Hergé drew it as Marlinspike Hall in <em>The Adventures of Tintin</em> —
+      with the two end pavilions removed.
+    </p>
+    <p>
+      Everything you see is generated at load: no mesh files, no textures and
+      no libraries. The stone coursing, the slate, the gravel and the leaves
+      are all noise functions evaluated in the fragment shader.
+    </p>
+  </div>
+
+  <div id="hint">
+    <b>drag</b> to orbit &nbsp;·&nbsp; <b>scroll</b> to zoom &nbsp;·&nbsp;
+    <b>shift-drag</b> or <b>right-drag</b> to pan &nbsp;·&nbsp; <b>1&ndash;5</b> views &nbsp;·&nbsp; <b>W</b> walk
+  </div>
+
+  <div id="curtain">
+    <h1>Château de Cheverny</h1>
+    <p id="loadMsg">Cutting the tuffeau…</p>
+    <div id="bar"><i></i></div>
+  </div>
+
+  <script src="src/util.js"></script>
+  <script src="src/geom.js"></script>
+  <script src="src/gl.js"></script>
+  <script src="src/shaders.js"></script>
+  <script src="src/castle.js"></script>
+  <script src="src/park.js"></script>
+  <script src="src/render.js"></script>
+  <script src="src/camera.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

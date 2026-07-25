@@ -1,0 +1,14 @@
+{
+  "name": "cheverny-3d",
+  "version": "1.0.0",
+  "description": "A real-time 3D model of the Château de Cheverny in vanilla JavaScript and WebGL 2. No meshes, no textures, no libraries, no build step.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs 8082",
+    "build": "node build.mjs",
+    "check": "node --check src/util.js && node --check src/geom.js && node --check src/gl.js && node --check src/shaders.js && node --check src/castle.js && node --check src/park.js && node --check src/render.js && node --check src/camera.js && node --check src/main.js"
+  },
+  "keywords": ["cheverny", "chateau", "webgl", "3d", "procedural", "architecture", "loire", "javascript"],
+  "license": "MIT"
+}
