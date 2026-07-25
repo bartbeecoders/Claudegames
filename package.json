@@ -5,9 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node galaga/server.mjs",
-    "build": "node galaga/build.mjs",
-    "check": "npm --prefix galaga run check"
+    "start": "node server.mjs",
+    "build": "node galaga/build.mjs && node gauntlet/build.mjs",
+    "check": "npm --prefix galaga run check && npm --prefix gauntlet run check"
   },
   "license": "MIT"
 }

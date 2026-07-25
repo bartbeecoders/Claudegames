@@ -1,0 +1,14 @@
+{
+  "name": "gauntlet-clone",
+  "version": "1.0.0",
+  "description": "A modern Gauntlet II clone in vanilla JavaScript and HTML5 canvas. No build step, no dependencies.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs 8081",
+    "build": "node build.mjs",
+    "check": "node --check src/util.js && node --check src/audio.js && node --check src/sprites.js && node --check src/dungeon.js && node --check src/entities.js && node --check src/hud.js && node --check src/game.js && node --check src/main.js"
+  },
+  "keywords": ["gauntlet", "arcade", "dungeon", "canvas", "game", "twin-stick", "javascript"],
+  "license": "MIT"
+}

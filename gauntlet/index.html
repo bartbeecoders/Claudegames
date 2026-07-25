@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>GAUNTLET</title>
+<!-- Add to Home Screen on iOS launches without Safari chrome. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Gauntlet">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#128481;</text></svg>">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: #000; color: #fff;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    overflow: hidden; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none; touch-action: none;
+  }
+  #wrap {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; gap: 10px;
+  }
+  #screen {
+    display: block;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+    background: #05060a;
+    box-shadow: 0 0 0 2px #1b1b2e, 0 0 60px rgba(120, 60, 255, 0.16);
+    max-width: 100vw; max-height: 100vh;
+  }
+  #hint {
+    font-size: 11px; letter-spacing: 0.12em; color: #4a4a63;
+    text-align: center; line-height: 1.8; padding: 0 12px;
+  }
+  #hint b { color: #7a7a9c; font-weight: 600; }
+  @media (max-height: 700px) { #hint { display: none; } }
+
+  /* Utility buttons and the magic key. `.ui` marks anything the thumbstick
+     handler must ignore, so pressing a button never starts a stick. */
+  #pad { display: none; }
+  #magic { display: none; }
+
+  @media (pointer: coarse) {
+    #pad {
+      display: flex; gap: 6px; position: fixed; z-index: 6;
+      right: calc(6px + env(safe-area-inset-right));
+      top: calc(6px + env(safe-area-inset-top));
+    }
+    #pad button {
+      -webkit-appearance: none; appearance: none;
+      width: 36px; height: 36px;
+      border: 0; border-radius: 10px;
+      background: rgba(255, 255, 255, 0.07);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 15px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #pad button:active { background: rgba(120, 190, 255, 0.3); }
+
+    /* Big enough to hit without looking, and clear of the aiming thumb. */
+    #magic {
+      display: flex; position: fixed; z-index: 6;
+      right: calc(14px + env(safe-area-inset-right));
+      bottom: calc(14px + env(safe-area-inset-bottom));
+      width: 64px; height: 64px;
+      -webkit-appearance: none; appearance: none;
+      border: 2px solid rgba(180, 138, 232, 0.55); border-radius: 50%;
+      background: rgba(122, 82, 200, 0.26);
+      color: #e8d8ff; font-size: 19px; font-weight: 700;
+      align-items: center; justify-content: center;
+      font-family: inherit; letter-spacing: 0.04em;
+    }
+    #magic:active { background: rgba(180, 138, 232, 0.55); }
+    #magic.empty { opacity: 0.3; }
+
+    #hint { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas id="screen" width="240" height="400"></canvas>
+    <div id="hint">
+      <b>&larr; &rarr; &uarr; &darr;</b> or <b>WASD</b> move &nbsp;&middot;&nbsp; <b>SPACE</b> fire &nbsp;&middot;&nbsp; drag with the <b>MOUSE</b> to aim<br>
+      <b>Q</b> magic &nbsp;&middot;&nbsp; <b>ENTER</b> start &nbsp;&middot;&nbsp; <b>P</b> pause &nbsp;&middot;&nbsp; <b>M</b> mute &nbsp;&middot;&nbsp; <b>F</b> fullscreen
+    </div>
+  </div>
+
+  <div id="pad" class="ui">
+    <button type="button" data-act="pause" aria-label="Pause">&#9208;</button>
+    <button type="button" data-act="mute" aria-label="Mute">&#128266;</button>
+    <button type="button" data-act="full" aria-label="Fullscreen">&#9974;</button>
+  </div>
+  <button id="magic" class="ui" type="button" aria-label="Use magic">&#10022;1</button>
+
+  <script src="src/util.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/sprites.js"></script>
+  <script src="src/dungeon.js"></script>
+  <script src="src/entities.js"></script>
+  <script src="src/hud.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>
