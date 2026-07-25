@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Claude Games</title>
+<meta name="description" content="Arcade games built from scratch in vanilla JavaScript.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#128126;</text></svg>">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; min-height: 100%; }
+  body {
+    background: #05060a;
+    color: #e8e8f0;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 20px 64px;
+  }
+  #stars { position: fixed; inset: 0; z-index: 0; }
+  main { position: relative; z-index: 1; width: 100%; max-width: 720px; }
+
+  header { text-align: center; padding: 72px 0 8px; }
+  h1 {
+    margin: 0; font-size: clamp(30px, 8vw, 54px); letter-spacing: 0.16em;
+    color: #ff3b30; font-weight: 700;
+    text-shadow: 0 0 22px rgba(255, 59, 48, 0.4);
+  }
+  .tagline { margin: 14px 0 0; color: #6f6f8c; font-size: 13px; letter-spacing: 0.1em; }
+
+  .grid { display: grid; gap: 18px; margin-top: 44px; }
+
+  .card {
+    display: block; text-decoration: none; color: inherit;
+    border: 1px solid #1e2033; border-radius: 14px;
+    background: linear-gradient(180deg, rgba(24, 26, 44, 0.72), rgba(10, 11, 20, 0.72));
+    padding: 24px 26px;
+    transition: border-color 140ms ease, transform 140ms ease, box-shadow 140ms ease;
+  }
+  .card:hover, .card:focus-visible {
+    border-color: #3d7cff; transform: translateY(-2px);
+    box-shadow: 0 10px 34px rgba(61, 124, 255, 0.14);
+    outline: none;
+  }
+  .card h2 {
+    margin: 0; font-size: 25px; letter-spacing: 0.14em; color: #ffd83d; font-weight: 700;
+  }
+  .card p { margin: 12px 0 0; color: #9a9ab8; font-size: 13.5px; line-height: 1.7; }
+  .tags { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .tags span {
+    font-size: 11px; letter-spacing: 0.08em; color: #7d7d9e;
+    border: 1px solid #23263a; border-radius: 999px; padding: 4px 11px;
+  }
+  .play { margin-top: 20px; font-size: 12px; letter-spacing: 0.14em; color: #3dd6ff; }
+
+  footer { margin-top: 52px; text-align: center; color: #4a4a63; font-size: 12px; line-height: 2; }
+  footer a { color: #6f6f8c; }
+</style>
+</head>
+<body>
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  <main>
+    <header>
+      <h1>CLAUDE GAMES</h1>
+      <p class="tagline">ARCADE GAMES BUILT FROM SCRATCH &middot; NO ENGINE &middot; NO BUILD STEP</p>
+    </header>
+
+    <div class="grid">
+      <a class="card" href="galaga/">
+        <h2>GALAGA</h2>
+        <p>
+          The 1981 Namco classic. Squadrons loop into formation, peel off to dive
+          at you, and Boss Galaga will try to steal your fighter with a tractor
+          beam &mdash; shoot the captor and fly into the wreck to fight as a
+          double-wide dual fighter.
+        </p>
+        <div class="tags">
+          <span>CANVAS 2D</span><span>VANILLA JS</span><span>NO ASSETS</span><span>TOUCH READY</span>
+        </div>
+        <div class="play">PLAY &rarr;</div>
+      </a>
+    </div>
+
+    <footer>
+      Every sprite, sound and font is generated at runtime &mdash; there is not a
+      single image or audio file in this repository.<br>
+      <a href="https://github.com/bartbeecoders/claudegames">Source on GitHub</a>
+    </footer>
+  </main>
+
+<script>
+/* Starfield, matching the one in the game. */
+(function () {
+  var c = document.getElementById('stars')
+  var x = c.getContext('2d')
+  var stars = []
+  var COLORS = ['#ffffff', '#8fd0ff', '#ffd0d0', '#d0ffd8', '#ffe9a0', '#c9c0ff']
+
+  function reset () {
+    var dpr = Math.min(2, window.devicePixelRatio || 1)
+    c.width = window.innerWidth * dpr
+    c.height = window.innerHeight * dpr
+    x.setTransform(dpr, 0, 0, dpr, 0, 0)
+    var count = Math.round(window.innerWidth * window.innerHeight / 9000)
+    stars = []
+    for (var i = 0; i < count; i++) {
+      stars.push({
+        x: Math.random() * window.innerWidth,
+        y: Math.random() * window.innerHeight,
+        z: 0.25 + Math.random() * 1.1,
+        color: COLORS[(Math.random() * COLORS.length) | 0],
+        phase: Math.random() * 260,
+        period: 150 + Math.random() * 180
+      })
+    }
+  }
+
+  function draw (advance) {
+    x.clearRect(0, 0, window.innerWidth, window.innerHeight)
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i]
+      if (advance) {
+        s.y += s.z * 0.34
+        s.phase += 1
+        if (s.phase > s.period) s.phase -= s.period
+        if (s.y > window.innerHeight) { s.y -= window.innerHeight; s.x = Math.random() * window.innerWidth }
+      }
+      if (s.phase > s.period * 0.66) continue
+      x.globalAlpha = 0.25 + s.z * 0.4
+      x.fillStyle = s.color
+      x.fillRect(s.x | 0, s.y | 0, s.z > 1 ? 2 : 1, s.z > 1 ? 2 : 1)
+    }
+    x.globalAlpha = 1
+  }
+
+  function frame () {
+    draw(true)
+    requestAnimationFrame(frame)
+  }
+
+  // Respect a reduced-motion preference: paint the stars once and hold still.
+  var still = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  window.addEventListener('resize', function () { reset(); if (still) draw(false) })
+  reset()
+  if (still) draw(false)
+  else requestAnimationFrame(frame)
+})()
+</script>
+</body>
+</html>
