@@ -80,9 +80,107 @@
     src.stop(t0 + opts.dur + 0.1)
   }
 
+  /* --- Music -------------------------------------------------------------
+
+     A short looping bass-and-arpeggio figure, sequenced on the WebAudio clock
+     rather than on rAF: notes are scheduled a fraction of a second ahead of
+     time, so the groove stays steady even when the frame rate does not.
+
+     Offsets are semitones from the root. `null` in the arp line is a rest. */
+  const ROOT = 55 // A1
+  const BASS = [0, 0, 7, 0, 5, 5, 0, 5, 3, 3, 10, 3, 5, 7, 5, 3]
+  const ARP = [
+    12, null, 19, null, 16, null, 19, null,
+    15, null, 22, null, 19, null, 16, null
+  ]
+
+  const LOOKAHEAD = 0.15 // seconds of notes to keep queued
+  const TICK = 25 // ms between scheduler wake-ups
+
+  let musicTimer = null
+  let musicStep = 0
+  let musicNext = 0
+  let stepDur = 0.125
+
+  function semi (n) {
+    return ROOT * Math.pow(2, n / 12)
+  }
+
+  /** Queue the two voices for one 16th-note slot at absolute time `t`. */
+  function scheduleStep (t, i) {
+    const bass = ctx.createOscillator()
+    const bassGain = ctx.createGain()
+    bass.type = 'triangle'
+    bass.frequency.setValueAtTime(semi(BASS[i]), t)
+    env(bassGain, t, 0.006, stepDur * 0.25, stepDur * 0.6, 0.16)
+    bass.connect(bassGain).connect(master)
+    bass.start(t)
+    bass.stop(t + stepDur * 1.2)
+
+    const a = ARP[i]
+    if (a == null) return
+    const lead = ctx.createOscillator()
+    const leadGain = ctx.createGain()
+    lead.type = 'square'
+    lead.frequency.setValueAtTime(semi(a), t)
+    env(leadGain, t, 0.004, stepDur * 0.15, stepDur * 0.5, 0.05)
+    lead.connect(leadGain).connect(master)
+    lead.start(t)
+    lead.stop(t + stepDur * 1.2)
+  }
+
+  function musicTick () {
+    if (!ready) return
+    // Timers are throttled hard in a backgrounded tab, so the queue can fall
+    // arbitrarily far behind. Pick the groove back up at the current time
+    // instead of scheduling every note that was missed in the meantime.
+    if (musicNext < ctx.currentTime) musicNext = ctx.currentTime + 0.02
+    while (musicNext < ctx.currentTime + LOOKAHEAD) {
+      scheduleStep(musicNext, musicStep)
+      musicNext += stepDur
+      musicStep = (musicStep + 1) % BASS.length
+    }
+  }
+
+  /** Short haptic pulse, silenced along with the audio. */
+  function vibrate (pattern) {
+    if (muted || !global.navigator || !global.navigator.vibrate) return
+    try {
+      global.navigator.vibrate(pattern)
+    } catch (e) {
+      /* Chrome throws if the page hasn't been interacted with yet. */
+    }
+  }
+
   const Sfx = {
     init,
     resume,
+    vibrate,
+
+    /** Looping background music. Safe to call redundantly. */
+    music: {
+      /** @param {number} difficulty 0..1 — nudges the tempo up as stages climb. */
+      start (difficulty) {
+        resume()
+        if (!ready) return
+        stepDur = 0.135 - Math.min(0.045, (difficulty || 0) * 0.05)
+        if (musicTimer) return
+        musicStep = 0
+        musicNext = ctx.currentTime + 0.06
+        musicTick()
+        musicTimer = global.setInterval(musicTick, TICK)
+      },
+
+      stop () {
+        if (!musicTimer) return
+        global.clearInterval(musicTimer)
+        musicTimer = null
+      },
+
+      get playing () {
+        return musicTimer !== null
+      }
+    },
 
     get muted () {
       return muted
@@ -109,6 +207,7 @@
     },
 
     playerDeath () {
+      vibrate(70)
       noise({ from: 1800, to: 90, dur: 0.9, vol: 0.5 })
       tone({ type: 'sawtooth', from: 420, to: 40, dur: 0.8, vol: 0.18 })
       tone({ type: 'square', from: 300, to: 30, dur: 0.9, vol: 0.12, delay: 0.05 })
@@ -125,12 +224,14 @@
     },
 
     captured () {
+      vibrate([25, 45, 25, 45, 60])
       for (let i = 0; i < 6; i++) {
         tone({ type: 'square', from: 300 + i * 130, to: 900 + i * 130, dur: 0.12, vol: 0.13, delay: i * 0.1 })
       }
     },
 
     rescue () {
+      vibrate(30)
       const notes = [523, 659, 784, 1047, 1319]
       notes.forEach((f, i) => tone({ type: 'square', from: f, dur: 0.13, vol: 0.2, delay: i * 0.08 }))
     },

@@ -127,6 +127,9 @@
       Sfx.stageStart()
       this.setState('playing')
     }
+
+    // The loop rides under the stage fanfare and runs until the run ends.
+    Sfx.music.start(this.difficulty)
   }
 
   /** Create all forty enemies with their staggered entrance routes. */
@@ -151,6 +154,7 @@
       saveHighScore(this.highScore)
     }
     this.setBanner(['GAME OVER'], 210)
+    Sfx.music.stop()
     Sfx.gameOver()
     this.setState('gameover')
   }

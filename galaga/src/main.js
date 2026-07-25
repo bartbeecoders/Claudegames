@@ -17,7 +17,8 @@
     right: false,
     fire: false,
     firePressed: false,
-    startPressed: false
+    startPressed: false,
+    dragDX: 0
   }
 
   const held = new Set()
@@ -44,19 +45,39 @@
     }
   }
 
+  /* Pause and mute are reachable from both the keyboard and the on-screen
+     buttons, so the behaviour lives here and both paths call it. Assigned by
+     the button row once it exists. */
+  let syncPad = () => {}
+
+  function togglePause () {
+    game.paused = !game.paused
+    G.Sfx.resume()
+    // Silence the loop while paused rather than leaving it running underneath.
+    if (game.paused) G.Sfx.music.stop()
+    else if (game.state === 'playing' || game.state === 'challenging') {
+      G.Sfx.music.start(game.difficulty)
+    }
+    syncPad()
+  }
+
+  function toggleMute () {
+    G.Sfx.init()
+    G.Sfx.toggleMute()
+    syncPad()
+  }
+
   global.addEventListener('keydown', e => {
     // Let the browser keep its own shortcuts when a modifier is involved.
     if (e.ctrlKey || e.metaKey || e.altKey) return
 
     if (e.code === 'KeyP') {
-      game.paused = !game.paused
-      G.Sfx.resume()
+      togglePause()
       e.preventDefault()
       return
     }
     if (e.code === 'KeyM') {
-      G.Sfx.init()
-      G.Sfx.toggleMute()
+      toggleMute()
       e.preventDefault()
       return
     }
@@ -88,65 +109,90 @@
   global.addEventListener('blur', () => {
     held.clear()
     input.left = input.right = input.fire = false
+    // Drop any in-progress drag too, or an interruption mid-swipe (a call, the
+    // app switcher) leaves the ship firing with no finger on the glass.
+    dragging.clear()
+    input.dragDX = 0
   })
 
-  /* Touch: three zones along the bottom of the screen.
+  /* Touch: drag anywhere to steer, and firing is automatic.
 
-     Zones are hit-tested by coordinate rather than bound to each element, so a
-     finger can slide from one control straight into another. Per-element
-     handlers can't do that on touch: the first pointerdown implicitly captures
-     the pointer, and every later event keeps going to the original element. */
-  const touch = document.getElementById('touch')
-  if (touch) {
-    const zones = Array.prototype.slice.call(touch.querySelectorAll('div'))
-    const active = new Map() // pointerId -> action
+     A three-button strip was the obvious first cut, but it plays badly on a
+     phone: steering is quantised to on/off, dodging a dive needs the thumb in
+     two places at once, and the strip eats a quarter of a small screen.
 
-    const zoneAt = (x, y) => {
-      for (const z of zones) {
-        const r = z.getBoundingClientRect()
-        if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return z
+     Instead the whole playfield is the control. Dragging is *relative* — the
+     ship moves by the same distance the finger does, converted from CSS pixels
+     to game pixels — so the ship never teleports to wherever you happened to
+     touch, and your thumb is never sitting on top of it. */
+  const DRAG_GAIN = 1.15 // a little faster than 1:1 so corner-to-corner is one swipe
+
+  const dragging = new Map() // pointerId -> last clientX
+
+  /** CSS pixels per game pixel, so drags translate at the on-screen scale. */
+  function pixelScale () {
+    const r = canvas.getBoundingClientRect()
+    return r.width > 0 ? r.width / G.W : 1
+  }
+
+  function isControl (target) {
+    return !!(target && target.closest && target.closest('#pad'))
+  }
+
+  function touchFire (down) {
+    if (down && !input.fire) input.firePressed = true
+    input.fire = down
+  }
+
+  global.addEventListener('pointerdown', e => {
+    if (e.pointerType === 'mouse' || isControl(e.target)) return
+    e.preventDefault()
+    G.Sfx.resume()
+    dragging.set(e.pointerId, e.clientX)
+    touchFire(true)
+  }, { passive: false })
+
+  global.addEventListener('pointermove', e => {
+    const last = dragging.get(e.pointerId)
+    if (last === undefined) return
+    e.preventDefault()
+    input.dragDX += (e.clientX - last) / pixelScale() * DRAG_GAIN
+    dragging.set(e.pointerId, e.clientX)
+  }, { passive: false })
+
+  const endDrag = e => {
+    if (!dragging.delete(e.pointerId)) return
+    if (dragging.size === 0) touchFire(false)
+  }
+
+  global.addEventListener('pointerup', endDrag)
+  global.addEventListener('pointercancel', endDrag)
+  global.addEventListener('contextmenu', e => {
+    if (!isControl(e.target)) e.preventDefault()
+  })
+
+  /* On-screen buttons for the things that were keyboard-only, and so were
+     simply unreachable on a phone: pause, mute and fullscreen. */
+  const pad = document.getElementById('pad')
+  if (pad) {
+    const sync = () => {
+      pad.querySelector('[data-act="mute"]').textContent = G.Sfx.muted ? '🔇' : '🔊'
+      pad.querySelector('[data-act="pause"]').textContent = game.paused ? '▶' : '⏸'
+    }
+
+    pad.addEventListener('click', e => {
+      const btn = e.target.closest('button')
+      if (!btn) return
+      switch (btn.dataset.act) {
+        case 'pause': togglePause(); break
+        case 'mute': toggleMute(); break
+        case 'full': toggleFullscreen(); break
       }
-      return null
-    }
-
-    const apply = () => {
-      const actions = new Set(active.values())
-      input.left = actions.has('left')
-      input.right = actions.has('right')
-      const fire = actions.has('fire')
-      if (fire && !input.fire) input.firePressed = true
-      input.fire = fire
-      for (const z of zones) z.classList.toggle('on', actions.has(z.dataset.key))
-    }
-
-    const track = e => {
-      e.preventDefault()
-      G.Sfx.resume()
-      const z = zoneAt(e.clientX, e.clientY)
-      if (z) active.set(e.pointerId, z.dataset.key)
-      else active.delete(e.pointerId)
-      apply()
-    }
-
-    const drop = e => {
-      active.delete(e.pointerId)
-      apply()
-    }
-
-    touch.addEventListener('pointerdown', e => {
-      // Release implicit capture so a drag can cross into a neighbouring zone.
-      if (touch.hasPointerCapture && touch.hasPointerCapture(e.pointerId)) {
-        touch.releasePointerCapture(e.pointerId)
-      }
-      track(e)
+      sync()
     })
-    touch.addEventListener('pointermove', e => {
-      if (active.size === 0 && e.pressure === 0) return
-      track(e)
-    })
-    touch.addEventListener('pointerup', drop)
-    touch.addEventListener('pointercancel', drop)
-    touch.addEventListener('contextmenu', e => e.preventDefault())
+
+    syncPad = sync
+    sync()
   }
 
   /* --- Presentation ------------------------------------------------------ */
@@ -166,8 +212,9 @@
       keeps it nearest-neighbour either way. */
   function resize () {
     const coarse = global.matchMedia('(pointer: coarse)').matches
-    // Space taken by the on-screen controls, or by the keyboard hint line.
-    const reserved = coarse && touch ? touch.getBoundingClientRect().height : 52
+    // Steering no longer needs a control strip, so a touch device only has to
+    // keep the small button row clear; a desktop keeps room for the key hints.
+    const reserved = coarse ? 56 : 52
     const vv = global.visualViewport
     const vw = vv ? vv.width : global.innerWidth
     const vh = vv ? vv.height : global.innerHeight
@@ -205,9 +252,12 @@
       accumulator -= G.STEP
       steps++
       if (!game.paused) game.update(1, input)
-      // Edge-triggered flags last exactly one simulation step.
+      // Edge-triggered flags last exactly one simulation step. Drag distance is
+      // cleared the same way: it is a displacement already accrued since the
+      // last step, so applying it on more than one step would double-count it.
       input.firePressed = false
       input.startPressed = false
+      input.dragDX = 0
     }
 
     game.draw()

@@ -40,12 +40,30 @@ npm start          # tiny zero-dependency static server on :8080
 | `M` | Mute |
 | `F` | Fullscreen |
 
+On touch, drag anywhere to steer and firing is automatic — see
+[On a phone](#on-a-phone).
+
 ## On a phone
 
-Touch controls appear automatically on any device with a coarse pointer:
-three buttons below the playfield — left, fire, right. You can slide a finger
-between them without lifting, and the playfield scales to fill the screen
-(portrait is the intended orientation; it's a vertical arcade game).
+Touch controls appear automatically on any device with a coarse pointer.
+
+**Drag anywhere to steer.** The whole screen is the control — put a thumb down
+and the ship moves with it, so you never have to cover the ship to fly it.
+Dragging is relative, not absolute: the ship shifts by the distance your thumb
+travels rather than jumping to wherever you touched.
+
+**Firing is automatic** while a finger is down, so one thumb plays the whole
+game. Tap once to start.
+
+A small row of buttons in the bottom corner covers pause, mute and fullscreen —
+the actions that are otherwise keyboard-only, and so unreachable on a phone.
+
+Portrait is the intended orientation; it's a vertical arcade game. The playfield
+is 3:4, so on a tall phone it fills the width and centres in the leftover
+height.
+
+Death, capture and rescue give a short haptic buzz on devices that support it.
+Muting silences that too.
 
 To play on an iPhone or iPad, the game needs to be served over HTTP — iOS
 can't open a multi-file site from the Files app. Two ways:
@@ -73,8 +91,8 @@ npm run build      # -> dist/galaga.html
 ```
 
 Either way, tap **Share → Add to Home Screen** to get a fullscreen icon with
-no Safari chrome. Tap the fire button once to start, which also unlocks audio
-(iOS won't play sound until you touch the page).
+no Safari chrome. Tap once to start, which also unlocks audio (iOS won't play
+sound until you touch the page).
 
 ## What's in it
 
@@ -102,6 +120,11 @@ The mechanics that make Galaga *Galaga*, not just a Space Invaders variant:
 Every asset is generated at runtime: sprites are baked from character grids,
 the 5×7 font is a bitmap table, and all sound is synthesised with WebAudio.
 There are no image or audio files anywhere in the repository.
+
+That includes the music: a bass-and-arpeggio loop sequenced on the WebAudio
+clock, scheduled a fraction of a second ahead so it keeps time independently of
+the frame rate, and edging faster as the stages get harder. It runs while a
+stage is in play and stops on pause and game over.
 
 ## Deploying
 
@@ -134,7 +157,7 @@ index.html          markup, styling, script order
 build.mjs           inlines everything into dist/galaga.html
 server.mjs          zero-dependency static server for local play
 src/util.js         constants and math helpers
-src/audio.js        WebAudio sound effects
+src/audio.js        WebAudio sound effects and the looping music sequencer
 src/sprites.js      pixel-art sprites baked to offscreen canvases
 src/stars.js        scrolling, blinking starfield
 src/paths.js        turtle-graphics flight-path builder

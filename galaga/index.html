@@ -40,30 +40,28 @@
   }
   #hint b { color: #7a7a9c; font-weight: 600; }
   @media (max-height: 640px) { #hint { display: none; } }
-  /* Touch controls: only shown on coarse pointers */
-  #touch { display: none; }
+  /* Utility buttons. Steering is done by dragging the playfield itself, so
+     these are only for pause / mute / fullscreen, which are otherwise
+     keyboard-only and therefore unreachable on a phone. */
+  #pad { display: none; }
   @media (pointer: coarse) {
-    #touch {
-      display: flex; position: fixed; left: 0; right: 0; bottom: 0;
-      height: calc(24vh + env(safe-area-inset-bottom));
-      padding-bottom: env(safe-area-inset-bottom);
-      align-items: stretch; z-index: 5;
+    #pad {
+      display: flex; gap: 8px; position: fixed; z-index: 5;
+      right: calc(8px + env(safe-area-inset-right));
+      bottom: calc(8px + env(safe-area-inset-bottom));
     }
-    /* Tint with background rather than `opacity`, so the glyph stays legible. */
-    #touch div {
-      flex: 1; margin: 6px; border-radius: 14px;
+    #pad button {
+      -webkit-appearance: none; appearance: none;
+      width: 44px; height: 44px; /* 44px is the minimum comfortable tap target */
+      border: 0; border-radius: 12px;
       background: rgba(255, 255, 255, 0.08);
-      color: rgba(255, 255, 255, 0.45);
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 19px; line-height: 1;
       display: flex; align-items: center; justify-content: center;
-      font-size: 26px; line-height: 1;
-      transition: background 60ms linear, color 60ms linear;
     }
-    #touch div.on {
-      background: rgba(120, 190, 255, 0.28);
-      color: rgba(255, 255, 255, 0.9);
-    }
-    /* Reserve the control strip so the playfield is never underneath it. */
-    #wrap { padding-bottom: calc(24vh + env(safe-area-inset-bottom)); }
+    #pad button:active { background: rgba(120, 190, 255, 0.3); }
+    /* Only the button row needs clearing now, not a quarter of the screen. */
+    #wrap { padding-bottom: calc(56px + env(safe-area-inset-bottom)); }
     #hint { display: none; }
   }
 </style>
@@ -76,8 +74,10 @@
       <b>P</b> pause &nbsp;&middot;&nbsp; <b>M</b> mute &nbsp;&middot;&nbsp; <b>F</b> fullscreen
     </div>
   </div>
-  <div id="touch" aria-hidden="true">
-    <div data-key="left">&#9664;</div><div data-key="fire">&#9650;</div><div data-key="right">&#9654;</div>
+  <div id="pad">
+    <button type="button" data-act="pause" aria-label="Pause">&#9208;</button>
+    <button type="button" data-act="mute" aria-label="Mute">&#128266;</button>
+    <button type="button" data-act="full" aria-label="Fullscreen">&#9974;</button>
   </div>
 
   <script src="src/util.js"></script>

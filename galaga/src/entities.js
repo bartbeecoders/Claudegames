@@ -58,6 +58,10 @@
     if (input.right) vx += 1
     this.x += vx * PLAYER_SPEED * dt
 
+    // Touch dragging supplies an absolute displacement in game pixels, already
+    // scaled from screen space, so it is applied independently of `dt`.
+    if (input.dragDX) this.x += input.dragDX
+
     const margin = this.halfWidth() + 2
     this.x = G.clamp(this.x, margin, G.W - margin)
   }
