@@ -3,8 +3,7 @@
 # Nothing is compiled — the repository root is already a working static site,
 # so it is uploaded as-is alongside the single-file bundle at /galaga.html.
 #
-# No manual setup: configure-pages runs with `enablement: true`, so the first
-# run turns Pages on and points it at Actions by itself.
+# One-time setup: Settings -> Pages -> Source: "GitHub Actions".
 name: deploy
 
 on:
@@ -42,11 +41,7 @@ jobs:
       - name: Verify the sources parse
         run: npm run check
 
-      # enablement: true creates the Pages site on first run, so the repository
-      # needs no manual Settings -> Pages step.
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - uses: actions/upload-pages-artifact@v3
         with:

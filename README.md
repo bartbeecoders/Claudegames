@@ -31,8 +31,8 @@ npm run build      # -> galaga/dist/galaga.html
 
 The repository root is already a working static site, so any static host will
 serve it as-is. `.github/workflows/deploy.yml` publishes to GitHub Pages on
-every push to `main`, and enables Pages itself on the first run — no manual
-*Settings → Pages* step needed.
+every push to `main` — the one-time setup is *Settings → Pages → Source:
+**GitHub Actions***.
 
 ## Adding a game
 
