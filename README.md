@@ -10,6 +10,7 @@ and font is generated at runtime.
 
 | | | |
 | --- | --- | --- |
+| **[Starfighter](starfighter/)** | A 3D space shooter in WebGL — fighter screens, a capital ship assault, and a trench run that ends in an exhaust port. | [source](starfighter/) · [readme](starfighter/README.md) |
 | **[Galaga](galaga/)** | The 1981 Namco classic — formation entrances, diving attacks, tractor-beam capture, dual fighter, challenging stages. | [source](galaga/) · [readme](galaga/README.md) |
 | **[Gauntlet](gauntlet/)** | Four heroes and endless generated dungeons — monster nests, locked vaults, magic potions, Death itself, and a health bar that never stops draining. | [source](gauntlet/) · [readme](gauntlet/README.md) |
 
@@ -25,11 +26,13 @@ Each game also works straight from `file://`, and builds to a single
 self-contained HTML file:
 
 ```sh
-npm run build      # -> galaga/dist/galaga.html, gauntlet/dist/gauntlet.html
+npm run build      # -> <game>/dist/<game>.html for each game
 ```
 
 Each game is playable on a phone. Galaga is one-thumb (drag to steer, automatic
-fire); Gauntlet is twin-stick (left thumb moves, right thumb aims and fires).
+fire); Gauntlet is twin-stick (left thumb moves, right thumb aims and fires);
+Starfighter puts a flight stick under your left thumb and the triggers on the
+right.
 
 ## Deploying
 

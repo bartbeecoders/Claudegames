@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "build": "node galaga/build.mjs && node gauntlet/build.mjs",
-    "check": "npm --prefix galaga run check && npm --prefix gauntlet run check"
+    "build": "node galaga/build.mjs && node gauntlet/build.mjs && node starfighter/build.mjs",
+    "check": "npm --prefix galaga run check && npm --prefix gauntlet run check && npm --prefix starfighter run check"
   },
   "license": "MIT"
 }

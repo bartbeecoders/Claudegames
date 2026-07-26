@@ -1,0 +1,14 @@
+{
+  "name": "starfighter",
+  "version": "1.0.0",
+  "description": "A 3D space shooter in vanilla JavaScript and WebGL. No engine, no dependencies, no assets, no build step.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs 8082",
+    "build": "node build.mjs",
+    "check": "node --check src/util.js && node --check src/gl.js && node --check src/geometry.js && node --check src/render.js && node --check src/audio.js && node --check src/entities.js && node --check src/ships.js && node --check src/hud.js && node --check src/game.js && node --check src/main.js"
+  },
+  "keywords": ["space", "shooter", "webgl", "3d", "game", "javascript", "no-dependencies"],
+  "license": "MIT"
+}
