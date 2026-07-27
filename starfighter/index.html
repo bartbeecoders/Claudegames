@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>STARFIGHTER</title>
+<meta name="description" content="A 3D space shooter in vanilla JavaScript and WebGL. No engine, no assets, no build step.">
+<!-- Add to Home Screen on iOS launches without Safari chrome. -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Starfighter">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>&#128760;</text></svg>">
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: #000; color: #fff;
+    font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    overflow: hidden; overscroll-behavior: none;
+    -webkit-user-select: none; user-select: none; touch-action: none;
+  }
+
+  /* The scene and the HUD are two stacked canvases: WebGL underneath, a plain
+     2D context on top for text and targeting, which keeps the type crisp at
+     any pixel ratio and costs the 3D pass nothing. */
+  #view, #hud {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    display: block;
+  }
+  #view { z-index: 0; background: #000; }
+  #hud { z-index: 1; pointer-events: none; }
+
+  body.flying { cursor: none; }
+
+  #hint {
+    position: fixed; z-index: 2;
+    left: 0; right: 0; bottom: calc(14px + env(safe-area-inset-bottom));
+    text-align: center;
+    font-size: 11px; letter-spacing: 0.12em; line-height: 1.9;
+    color: rgba(124, 246, 208, 0.32);
+    pointer-events: none;
+  }
+  #hint b { color: rgba(124, 246, 208, 0.6); font-weight: 600; }
+  @media (max-height: 620px) { #hint { display: none; } }
+
+  /* Utility buttons. `.ui` marks anything the flight-stick handler must
+     ignore, so pressing a button never starts a turn. */
+  #pad {
+    position: fixed; z-index: 3;
+    display: flex; gap: 6px;
+    right: calc(8px + env(safe-area-inset-right));
+    top: calc(8px + env(safe-area-inset-top));
+  }
+  #pad button {
+    -webkit-appearance: none; appearance: none;
+    width: 34px; height: 34px;
+    border: 0; border-radius: 9px;
+    background: rgba(124, 246, 208, 0.08);
+    color: rgba(124, 246, 208, 0.7);
+    font-size: 14px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #pad button:active { background: rgba(124, 246, 208, 0.28); }
+
+  /* Touch flight controls. Hidden on anything with a real pointer. */
+  #sticks { display: none; }
+  @media (pointer: coarse) {
+    #hint { display: none; }
+    #sticks { display: block; }
+    .tbtn {
+      position: fixed; z-index: 3;
+      -webkit-appearance: none; appearance: none;
+      display: flex; align-items: center; justify-content: center;
+      font-family: inherit; font-weight: 700; letter-spacing: 0.08em;
+      border-radius: 50%;
+      color: #d8fff2;
+    }
+    #btn-fire {
+      right: calc(18px + env(safe-area-inset-right));
+      bottom: calc(84px + env(safe-area-inset-bottom));
+      width: 88px; height: 88px; font-size: 13px;
+      border: 2px solid rgba(255, 90, 74, 0.5);
+      background: rgba(255, 90, 74, 0.22);
+    }
+    #btn-fire:active { background: rgba(255, 90, 74, 0.55); }
+    #btn-boost {
+      right: calc(112px + env(safe-area-inset-right));
+      bottom: calc(30px + env(safe-area-inset-bottom));
+      width: 62px; height: 62px; font-size: 11px;
+      border: 2px solid rgba(127, 188, 255, 0.5);
+      background: rgba(127, 188, 255, 0.18);
+    }
+    #btn-boost:active { background: rgba(127, 188, 255, 0.5); }
+    #btn-torpedo {
+      right: calc(24px + env(safe-area-inset-right));
+      bottom: calc(14px + env(safe-area-inset-bottom));
+      width: 62px; height: 62px; font-size: 11px;
+      border: 2px solid rgba(192, 139, 255, 0.5);
+      background: rgba(192, 139, 255, 0.18);
+    }
+    #btn-torpedo:active { background: rgba(192, 139, 255, 0.5); }
+  }
+
+  #fail {
+    position: fixed; inset: 0; z-index: 9;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 0 32px;
+    background: #05070c;
+  }
+  #fail h1 { font-size: 22px; letter-spacing: 0.2em; color: #ff5a4a; margin: 0 0 14px; }
+  #fail p { font-size: 13px; line-height: 1.8; color: #7c8496; max-width: 420px; margin: 0; }
+</style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+  <canvas id="hud"></canvas>
+
+  <div id="pad" class="ui">
+    <button type="button" data-act="view" aria-label="Change view">&#128065;</button>
+    <button type="button" data-act="pause" aria-label="Pause">&#9208;</button>
+    <button type="button" data-act="mute" aria-label="Mute">&#128266;</button>
+    <button type="button" data-act="full" aria-label="Fullscreen">&#9974;</button>
+  </div>
+
+  <div id="sticks">
+    <button id="btn-fire" class="tbtn ui" type="button" aria-label="Fire">FIRE</button>
+    <button id="btn-boost" class="tbtn ui" type="button" aria-label="Boost">BOOST</button>
+    <button id="btn-torpedo" class="tbtn ui" type="button" aria-label="Torpedo">TORP</button>
+  </div>
+
+  <div id="hint">
+    <b>MOUSE</b> or <b>WASD</b> fly &nbsp;&middot;&nbsp; <b>CLICK</b> / <b>SPACE</b> cannons &nbsp;&middot;&nbsp;
+    <b>RIGHT CLICK</b> / <b>F</b> torpedo &nbsp;&middot;&nbsp; <b>SHIFT</b> boost &nbsp;&middot;&nbsp; <b>Q E</b> roll<br>
+    <b>ENTER</b> launch &nbsp;&middot;&nbsp; <b>C</b> view &nbsp;&middot;&nbsp; <b>P</b> pause &nbsp;&middot;&nbsp;
+    <b>M</b> mute &nbsp;&middot;&nbsp; <b>SHIFT+F</b> fullscreen
+  </div>
+
+  <script src="src/util.js"></script>
+  <script src="src/gl.js"></script>
+  <script src="src/geometry.js"></script>
+  <script src="src/render.js"></script>
+  <script src="src/audio.js"></script>
+  <script src="src/entities.js"></script>
+  <script src="src/ships.js"></script>
+  <script src="src/hud.js"></script>
+  <script src="src/game.js"></script>
+  <script src="src/main.js"></script>
+</body>
+</html>

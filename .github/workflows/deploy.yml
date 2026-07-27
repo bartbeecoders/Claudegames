@@ -1,7 +1,7 @@
 # Publishes the game to GitHub Pages.
 #
 # Nothing is compiled — the repository root is already a working static site,
-# so it is uploaded as-is alongside the single-file bundle at /galaga.html.
+# so it is uploaded as-is alongside each game's single-file bundle.
 #
 # One-time setup: Settings -> Pages -> Source: "GitHub Actions".
 name: deploy
@@ -34,7 +34,8 @@ jobs:
         with:
           node-version: 22
 
-      # Produces galaga/dist/galaga.html, published as /galaga/dist/galaga.html.
+      # One self-contained <game>/dist/<game>.html per game, published
+      # alongside the multi-file version it was built from.
       - name: Build the single-file bundles
         run: npm run build
 
